@@ -1,6 +1,7 @@
 import logging
 import util
-import prettytable as pt
+import pandas as pd
+import textwrap as twp
 import pickle
 from recommender import Recommender
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -81,67 +82,77 @@ async def recommend_movie(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     selected_option = context.user_data.get('selected_option')
     user_input = context.user_data.get('user_input')
 
-    table = pt.PrettyTable(['Title', 'Year'])
-    table.align['Year'] = 'l'
-    table.align['Title'] = 'l'
+    table_data = []
 
     movie_title = user_input.split(",")[0]
     year = int(user_input.split(",")[1])
 
     print(movie_title, year)
 
+    img_buffer = None
+
     if selected_option == OPTION_ONE:
         if recommender.is_in_movie(movie_title, year):
             recommendations = recommender.recommendMovie(movie_title, year, 10)
             response = "Here are your movies: 🍿\n"
+            await update.message.reply_text(response, parse_mode="MarkdownV2")
+
             for movie in recommendations:
-                table.add_row([f"🎬 {movie['movie']}", f"{movie['year']}"])
-            response += f'```{table}```'
+                table_data.append({"Title":twp.fill(movie["movie"], 40), "Year":movie["year"]})
+            
+            img_buffer = recommender.create_table(pd.DataFrame(table_data[::-1]))
         else:
-            possible_titles = recommender.suggest_movies(movie_title)
-            if possible_titles != "":
+            img_buffer = recommender.suggest_movies(movie_title)
+            if img_buffer != None:
                 response = "Movie not found\. Here are some titles similar to what you entered: 📚\n"
-                response += possible_titles
+                await update.message.reply_text(response, parse_mode="MarkdownV2")
+
             else:
                 response = "Movie not found 🤷‍♂️"
+                await update.message.reply_text(response, parse_mode="MarkdownV2")
+
 
     elif selected_option == OPTION_TWO:
         if recommender.is_in_movie(movie_title, year):
             recommendations = recommender.recommendMovie(movie_title, year, 20)
             response = "Here are your movies: 🍿\n"
+            await update.message.reply_text(response, parse_mode="MarkdownV2")
+
             for movie in recommendations:
-                table.add_row([f"🎬 {movie['movie']}", f"{movie['year']}"])
-            response += f'```{table}```'
+                table_data.append({"Title":twp.fill(movie["movie"], 40), "Year":movie["year"]})
+
+            img_buffer = recommender.create_table(pd.DataFrame(table_data[::-1]))
         else:
-            possible_titles = recommender.suggest_movies(movie_title)
-            if possible_titles != "":
-                response = "Movie not found. Here are some titles similar to what you entered: 📚\n"
-                response += possible_titles
+            img_buffer = recommender.suggest_movies(movie_title)
+            if img_buffer != None:
+                response = "Movie not found\. Here are some titles similar to what you entered: 📚\n"
+                await update.message.reply_text(response, parse_mode="MarkdownV2")
             else:
                 response = "Movie not found 🤷‍♂️"
+                await update.message.reply_text(response, parse_mode="MarkdownV2")
     else:
-        response = "Invalid option selected. Please try again. 🚫"
+        response = "Invalid option selected\. Please try again. 🚫"
+        await update.message.reply_text(response, parse_mode="MarkdownV2")
 
-    await update.message.reply_text(response, parse_mode="MarkdownV2")  # Send the response automatically after processing
+    if img_buffer:
+        await update.message.reply_photo(photo=img_buffer)
+        img_buffer.close()
     return ConversationHandler.END
 
 async def search_movie(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_input = context.user_data.get('user_input')
 
-    table = pt.PrettyTable(['Title', 'Year'])
-    table.align['Year'] = 'l'
-    table.align['Title'] = 'l'
-
     movie_title = user_input.split(",")[0]
 
-    possible_titles = recommender.suggest_movies(movie_title)
-    if possible_titles != "":
+    img_buffer = recommender.suggest_movies(movie_title)
+    if img_buffer:
         response = "Some titles similar to what you entered: 📚\n"
-        response += possible_titles
+        await update.message.reply_text(response, parse_mode="MarkdownV2")  # Send the response automatically after processing
+        await update.message.reply_photo(photo=img_buffer)
     else:
         response = "No movies found 🤷‍♂️"
+        await update.message.reply_text(response, parse_mode="MarkdownV2")  # Send the response automatically after processing
 
-    await update.message.reply_text(response, parse_mode="MarkdownV2")  # Send the response automatically after processing
     return ConversationHandler.END
 
 def main() -> None:
