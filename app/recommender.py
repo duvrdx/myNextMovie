@@ -72,7 +72,6 @@ class Recommender():
     def suggest_movies(self, title) -> str:
         table_data = []
 
-
         suggestions = self.dataset[self.dataset["primaryTitle"].str.contains(title, case=False, regex=False)].sort_values(by=["numVotes"], ascending=False)
         
         if not suggestions.empty:
@@ -80,7 +79,6 @@ class Recommender():
             for pair in list(zip(suggestions["primaryTitle"], suggestions["startYear"]))[0:16]:
                 table_data.append({"Title": twp.fill(pair[0], 40), "Year": pair[1]})
 
-            
             # Crie um DataFrame do Pandas a partir dos dados da tabela
             df = pd.DataFrame(table_data)
             df = df[::-1]
@@ -96,7 +94,7 @@ class Recommender():
             return True
         return False
 
-    def recommendMovie(self, title, year, num_movies) -> list:
+    def get_recommendation(self, title, year, num_movies) -> list:
         recommendations = []
 
         target_index = self.dataset[(self.dataset["primaryTitle"].str.lower() == title.lower()) & (self.dataset["startYear"] == year)].index[0]
@@ -109,3 +107,11 @@ class Recommender():
             })
 
         return recommendations
+    
+    def recommend_movie(self, recommendations) -> str:
+        table_data = []
+
+        for movie in recommendations:
+                table_data.append({"Title":twp.fill(movie["movie"], 40), "Year":movie["year"]})
+
+        return self.create_table(pd.DataFrame(table_data[::-1]))

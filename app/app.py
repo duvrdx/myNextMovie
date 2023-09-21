@@ -82,25 +82,17 @@ async def recommend_movie(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     selected_option = context.user_data.get('selected_option')
     user_input = context.user_data.get('user_input')
 
-    table_data = []
-
     movie_title = user_input.split(",")[0]
     year = int(user_input.split(",")[1])
 
     print(movie_title, year)
 
-    img_buffer = None
-
     if selected_option == OPTION_ONE:
         if recommender.is_in_movie(movie_title, year):
-            recommendations = recommender.recommendMovie(movie_title, year, 10)
+            recommendations = recommender.get_recommendation(movie_title, year, 10)
             response = "Here are your movies: 🍿\n"
             await update.message.reply_text(response, parse_mode="MarkdownV2")
-
-            for movie in recommendations:
-                table_data.append({"Title":twp.fill(movie["movie"], 40), "Year":movie["year"]})
-            
-            img_buffer = recommender.create_table(pd.DataFrame(table_data[::-1]))
+            img_buffer = recommender.recommend_movie(recommendations)
         else:
             img_buffer = recommender.suggest_movies(movie_title)
             if img_buffer != None:
@@ -114,14 +106,10 @@ async def recommend_movie(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     elif selected_option == OPTION_TWO:
         if recommender.is_in_movie(movie_title, year):
-            recommendations = recommender.recommendMovie(movie_title, year, 20)
+            recommendations = recommender.get_recommendation(movie_title, year, 20)
             response = "Here are your movies: 🍿\n"
             await update.message.reply_text(response, parse_mode="MarkdownV2")
-
-            for movie in recommendations:
-                table_data.append({"Title":twp.fill(movie["movie"], 40), "Year":movie["year"]})
-
-            img_buffer = recommender.create_table(pd.DataFrame(table_data[::-1]))
+            img_buffer = recommender.recommend_movie(recommendations)
         else:
             img_buffer = recommender.suggest_movies(movie_title)
             if img_buffer != None:
@@ -137,6 +125,7 @@ async def recommend_movie(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if img_buffer:
         await update.message.reply_photo(photo=img_buffer)
         img_buffer.close()
+        
     return ConversationHandler.END
 
 async def search_movie(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
